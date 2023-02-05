@@ -1,0 +1,19 @@
+h1 {
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+li {
+  margin: 5px;
+}
+
+.close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn button {
+  padding: 4px;
+  /* border-radius: 0px; */
+}
