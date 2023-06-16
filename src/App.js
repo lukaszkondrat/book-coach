@@ -1,110 +1,102 @@
-import { useState } from "react";
-import FullCalendar from "@fullcalendar/react";
-import ModalBooking from "./components/ModalBooking";
+import { useState, useContext, useEffect } from "react";
 
+import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 
-import "./App.css";
+import {
+  today,
+  businessHours,
+  businessHoursStart,
+  businessHoursEnd,
+} from "./helpers/constants";
+
+import BookingsContext from "./store/bookings-context";
+
+import ModalBooking from "./components/ModalBooking";
 import ModalInfo from "./components/ModalInfo";
 
-const createId = () => {
-  return Math.random().toString();
-};
-const today = new Date().toISOString();
-// const currHour = +today.slice(11, 13);
-
-export const businessHours = [
-  {
-    daysOfWeek: [1, 2, 3, 4, 5],
-    startTime: "07:00",
-    endTime: "21:00",
-  },
-];
-const businessHoursStart = +businessHours[0].startTime.slice(0, 2);
-const businessHoursEnd = +businessHours[0].endTime.slice(0, 2);
+import "./App.css";
 
 const App = () => {
-  const [modalBookingOpen, setModalBookingOpen] = useState(false);
-  const [modalInfoOpen, setModalInfoOpen] = useState(false);
-  const [isValid, setIsValid] = useState(false);
-  const [events, setEvents] = useState([]);
-  const [updatedEvents, setUpdatedEvents] = useState([]);
+  const [modalOpen, setModalOpen] = useState({ info: true, booking: false });
+  const [bookingDetails, setBookingDetails] = useState(null);
 
-  const manageBookingDataHandler = (data) => {
-    setModalBookingOpen(false);
-    const newEvent = [{ ...events[0], ...data }];
-    setUpdatedEvents((prevEvents) => [newEvent, ...prevEvents]);
-  };
+  const bookingCtx = useContext(BookingsContext);
 
-  const removeEventHandler = (selectionInfo) => {
+  const removeBooking = (selectionInfo) => {
     const answer = prompt("Are you sure to delete? yes/no");
+    const id = selectionInfo.event._def.extendedProps._id;
     if (answer === "yes") {
       selectionInfo.event.remove();
+      bookingCtx.removeBooking(id);
     }
   };
 
-  const validateDataHandler = () => {
-    setIsValid(true);
+  const closeInfoModal = () => {
+    setModalOpen({ booking: true });
   };
 
-  const closeModalHandler = () => {
-    setModalInfoOpen(false);
-    setModalBookingOpen(false);
-    setIsValid(false);
+  const closeBookingModal = () => {
+    setModalOpen({ booking: false });
   };
 
-  const selectDateHandler = (selectionInfo) => {
-    const start = +selectionInfo.startStr.slice(11, 13);
+  const readDataFromModal = (data) => {
+    setBookingDetails(data);
+  };
 
-    const title = "Squash";
-    let calendarApi = selectionInfo.view.calendar;
-
-    // calendarApi.unselect(); // clear date selection
-
+  const bookEvent = (selectionInfo) => {
     if (selectionInfo.view.type === "dayGridMonth") {
-      setModalInfoOpen(true);
-    } else {
-      if (
-        start >= businessHoursStart &&
-        // start > currHour + 1 &&
-        start < businessHoursEnd
-      ) {
-        setModalBookingOpen(true);
-        if (isValid) {
-          const newEvent = {
-            id: createId(),
-            title,
-            ...selectionInfo,
-          };
-          calendarApi.addEvent(newEvent);
-          setEvents((prevEv) => [newEvent, ...prevEv]);
-        }
-      } else {
-        setModalInfoOpen(true);
+      setModalOpen({ info: true, booking: false });
+    }
+
+    const start = +selectionInfo.startStr.slice(11, 13);
+    if (start >= businessHoursStart && start < businessHoursEnd) {
+      if (!bookingDetails) {
+        alert("Enter your name and number first");
+        return;
       }
+
+      const title = "Squash";
+      const newBooking = {
+        title,
+        ...bookingDetails,
+        start: selectionInfo.startStr,
+        end: selectionInfo.endStr,
+      };
+      bookingCtx.addBooking(newBooking);
+
+      const calendarApi = selectionInfo.view.calendar;
+      calendarApi.addEvent(newBooking);
+
+      setBookingDetails(null);
+      setModalOpen({ info: false, booking: true });
+    } else {
+      setModalOpen({ info: true, booking: false });
     }
   };
 
   return (
     <div>
-      <h1>Book a coach</h1>
-      {modalBookingOpen && (
+      <h1>BOOK A SQUASH COACH</h1>
+
+      {modalOpen.booking && !modalOpen.info ? (
         <ModalBooking
-          onBook={manageBookingDataHandler}
-          onClose={closeModalHandler}
-          onValidate={validateDataHandler}
+          onClose={closeBookingModal}
+          onReadData={readDataFromModal}
         />
-      )}
-      {modalInfoOpen && <ModalInfo onClose={closeModalHandler} />}
-      {!modalBookingOpen && (
+      ) : null}
+
+      {modalOpen.info && <ModalInfo onClose={closeInfoModal} />}
+
+      {!modalOpen.info && (
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           headerToolbar={{
             left: "prev,next,today",
             center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay",
+            right: "dayGridMonth,timeGridWeek",
           }}
           height="auto"
           initialView="timeGridWeek"
@@ -112,13 +104,12 @@ const App = () => {
           firstDay={[1]}
           validRange={{ start: today }}
           nowIndicator={true}
-          navLinks={true}
           businessHours={businessHours}
           selectable={true}
           weekends={false}
-          events={events}
-          select={selectDateHandler}
-          eventClick={removeEventHandler}
+          events={bookingCtx.allBookings}
+          select={bookEvent}
+          eventClick={removeBooking}
           fixedWeekCount={false}
         />
       )}

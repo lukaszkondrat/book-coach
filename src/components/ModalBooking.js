@@ -2,35 +2,25 @@ import { useRef } from "react";
 import Card from "./Card";
 import "./ModalBooking.css";
 
-const Modal = (props) => {
+const ModalBooking = ({ onReadData, onClose }) => {
   const nameInputRef = useRef();
   const surnameInputRef = useRef();
   const phoneInputRef = useRef();
 
-  const validateDataHandler = () => {
-    if (
-      nameInputRef.current.value !== "" &&
-      surnameInputRef.current.value !== "" &&
-      phoneInputRef.current.value !== ""
-    ) {
-      props.onValidate();
-    }
-  };
-
-  const submitDataHandler = (e) => {
-    e.preventDefault();
-    validateDataHandler();
+  const submitForm = (event) => {
+    event.preventDefault();
     const data = {
       name: nameInputRef.current.value,
       surname: surnameInputRef.current.value,
       phone: phoneInputRef.current.value,
     };
-    props.onBook(data);
-    // }
+    onReadData(data);
+    onClose();
   };
+
   return (
     <Card>
-      <form onSubmit={submitDataHandler}>
+      <form onSubmit={submitForm}>
         <div className="first-row">
           <span className="inputs">
             <label htmlFor="name">Your name:</label>
@@ -46,7 +36,6 @@ const Modal = (props) => {
           <input type="text" id="name" ref={phoneInputRef} required />
         </div>
         <div className="btn">
-          <button onClick={props.onClose}>X</button>
           <button>Book</button>
         </div>
       </form>
@@ -54,4 +43,4 @@ const Modal = (props) => {
   );
 };
 
-export default Modal;
+export default ModalBooking;
